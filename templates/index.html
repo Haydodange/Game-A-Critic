@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <p>Welcome to GuessThe.Game Database (aka. GTGDB). This website is dedicated to the hard working Year 12 SE students of 2024-2025. The last 5 minutes of class are always a flurry of excitement and hard work. They open <a href="https://guessthe.game/">GuessThe.Game</a> and scream their suggestions at the host. Let's start tracking their progress.</p>
+
+
+    {% if session['username'] %}
+        <br>
+        <p>Hello {{ session['username'] }}</p>
+
+        <a href="/add"><button>Add guess</button></a>
+    {% endif %}
+    
+
+</div>
+
+<br>
+
+<table class="guess_table">
+
+    <thead>
+        <th>Date</th>
+        <th>User who guessed</th>
+        <th>Game</th>
+        <th>Score</th>
+    </thead>
+
+    <tbody>
+        {% for guess in guesses %}
+        <tr>
+            <td>{{ guess['date'] }}</td>
+            <td>{{ guess['username'] }}</td>
+            <td>{{ guess['game'] }}</td>
+            <td>{{ guess['score'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+
+</table>
+
+{% endblock %}
