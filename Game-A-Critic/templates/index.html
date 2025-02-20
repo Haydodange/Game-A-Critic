@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Latest Game Reviews</h2>
+    
+    <div class="reviews-grid">
+        {% for review in reviews %}
+            <div class="review-card">
+                <div class="review-header">
+                    <h3>{{ review['game_title'] }}</h3>
+                    <div class="rating">
+                        {% for _ in range(review['rating']) %}
+                            <span class="star">★</span>
+                        {% endfor %}
+                        {% for _ in range(5 - review['rating']) %}
+                            <span class="star-empty">☆</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <p class="review-text">{{ review['review_text'] }}</p>
+                <div class="review-meta">
+                    <span>By {{ review['username'] }}</span>
+                    <span>{{ review['created_at'].split()[0] }}</span>
+                </div>
+                {% if session['id'] == review['user_id'] %}
+                    <div class="review-actions">
+                        <a href="{{ url_for('edit_review', review_id=review['id']) }}" class="btn btn-edit">Edit</a>
+                        <a href="{{ url_for('delete_review', review_id=review['id']) }}" 
+                           class="btn btn-delete"
+                           onclick="return confirm('Are you sure you want to delete this review?')">Delete</a>
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="no-results-container">
+                <img src="{{ url_for('static', filename='images/no-reviews.gif') }}" 
+                     alt="No reviews yet" 
+                     class="no-results-gif">
+                <p class="no-results-text">No reviews yet. Be the first to add one!</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
