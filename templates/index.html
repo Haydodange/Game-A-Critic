@@ -1,44 +1,45 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="container">
-
-    <p>Welcome to GuessThe.Game Database (aka. GTGDB). This website is dedicated to the hard working Year 12 SE students of 2024-2025. The last 5 minutes of class are always a flurry of excitement and hard work. They open <a href="https://guessthe.game/">GuessThe.Game</a> and scream their suggestions at the host. Let's start tracking their progress.</p>
-
-
-    {% if session['username'] %}
-        <br>
-        <p>Hello {{ session['username'] }}</p>
-
-        <a href="/add"><button>Add guess</button></a>
-    {% endif %}
+    <h2>Latest Game Reviews</h2>
     
-
-</div>
-
-<br>
-
-<table class="guess_table">
-
-    <thead>
-        <th>Date</th>
-        <th>User who guessed</th>
-        <th>Game</th>
-        <th>Score</th>
-    </thead>
-
-    <tbody>
-        {% for guess in guesses %}
-        <tr>
-            <td>{{ guess['date'] }}</td>
-            <td>{{ guess['username'] }}</td>
-            <td>{{ guess['game'] }}</td>
-            <td>{{ guess['score'] }}</td>
-        </tr>
+    <div class="reviews-grid">
+        {% for review in reviews %}
+            <div class="review-card">
+                <div class="review-header">
+                    <h3>{{ review['game_title'] }}</h3>
+                    <div class="rating">
+                        {% for _ in range(review['rating']) %}
+                            <span class="star">★</span>
+                        {% endfor %}
+                        {% for _ in range(5 - review['rating']) %}
+                            <span class="star-empty">☆</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <p class="review-text">{{ review['review_text'] }}</p>
+                <div class="review-meta">
+                    <span>By {{ review['username'] }}</span>
+                    <span>{{ review['created_at'].split()[0] }}</span>
+                </div>
+                {% if session['id'] == review['user_id'] %}
+                    <div class="review-actions">
+                        <a href="{{ url_for('edit_review', review_id=review['id']) }}" class="btn btn-edit">Edit</a>
+                        <a href="{{ url_for('delete_review', review_id=review['id']) }}" 
+                           class="btn btn-delete"
+                           onclick="return confirm('Are you sure you want to delete this review?')">Delete</a>
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="no-results-container">
+                <img src="{{ url_for('static', filename='images/no-reviews.gif') }}" 
+                     alt="No reviews yet" 
+                     class="no-results-gif">
+                <p class="no-results-text">No reviews yet. Be the first to add one!</p>
+            </div>
         {% endfor %}
-    </tbody>
-
-</table>
-
+    </div>
+</div>
 {% endblock %}

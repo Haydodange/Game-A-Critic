@@ -1,78 +1,136 @@
-from flask import Flask, render_template, request, session, redirect
+from flask import Flask, render_template, request, session, redirect, url_for, flash
+from functools import wraps
 import db
 
+
 app = Flask(__name__)
-app.secret_key = "gtg"
+app.secret_key = "The_Power_Of_Friendship"
+
+
+# initialize database on startup
+db.init_db()
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('username') is None:
+            flash('Please login to access this page', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 @app.route("/")
-def Home():
-    guessData = db.GetAllGuesses()
-    return render_template("index.html", guesses=guessData)
+def home():
+    reviews = db.get_all_reviews()
+    return render_template("index.html", reviews=reviews)
+
+
+@app.route("/search")
+def search():
+    query = request.args.get('q', '')
+    reviews = db.search_reviews(query) if query else []
+    return render_template("search.html", reviews=reviews, query=query)
+
 
 @app.route("/login", methods=["GET", "POST"])
-def Login():
+def login():
+    if session.get('username'):
+        return redirect(url_for('home'))
 
-    if session.get('username') != None:
-        return redirect("/")
-
-    # They sent us data, get the username and password
-    # then check if their details are correct.
     if request.method == "POST":
-        username = request.form['username']
-        password = request.form['password']
-
-        # Did they provide good details
-        user = db.CheckLogin(username, password)
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = db.check_login(username, password)
         if user:
-            # Yes! Save their username then
             session['id'] = user['id']
             session['username'] = username
-
-            # Send them back to the homepage
-            return redirect("/")
-
+            flash('Successfully logged in!', 'success')
+            return redirect(url_for('home'))
+        flash('Invalid username or password', 'error')
+    
     return render_template("login.html")
 
+
 @app.route("/logout")
-def Logout():
+def logout():
     session.clear()
-    return redirect("/")
+    flash('Successfully logged out!', 'success')
+    return redirect(url_for('home'))
+
 
 @app.route("/register", methods=["GET", "POST"])
-def Register():
+def register():
+    if session.get('username'):
+        return redirect(url_for('home'))
 
-    if session.get('username') != None:
-        return redirect("/")
-
-    # If they click the submit button, let's register
     if request.method == "POST":
-        username = request.form['username']
-        password = request.form['password']
-
-        # Try and add them to the DB
-        if db.RegisterUser(username, password):
-            # Success! Let's go to the homepage
-            return redirect("/")
+        username = request.form.get('username')
+        password = request.form.get('password')
         
+        if db.register_user(username, password):
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('login'))
+        flash('Username already exists or invalid input', 'error')
+    
     return render_template("register.html")
 
-@app.route("/add", methods=["GET","POST"])
-def Add():
 
-    # Check if they are logged in first
-    if session.get('username') == None:
-        return redirect("/")
-    
-    # Did they click submit?
+@app.route("/add", methods=["GET", "POST"])
+@login_required
+def add_review():
     if request.method == "POST":
-        user_id = session['id']
-        date = request.form['date']
-        game = request.form['game']
-        score = request.form['score']
+        game_title = request.form.get('game_title')
+        review_text = request.form.get('review_text')
+        rating = request.form.get('rating')
+        
+        if db.add_review(session['id'], game_title, review_text, rating):
+            flash('Review added successfully!', 'success')
+            return redirect(url_for('home'))
+        flash('Error adding review. Please try again.', 'error')
+    
+    return render_template("add_review.html")
 
-        # Send the data to add our new guess to the db
-        db.AddGuess(user_id, date, game, score)
 
-    return render_template("add.html")
+@app.route("/edit/<int:review_id>", methods=["GET", "POST"])
+@login_required
+def edit_review(review_id):
+    review = db.get_review_by_id(review_id)
+    
+    if not review or review['user_id'] != session['id']:
+        flash('You can only edit your own reviews', 'error')
+        return redirect(url_for('home'))
+    
+    if request.method == "POST":
+        game_title = request.form.get('game_title')
+        review_text = request.form.get('review_text')
+        rating = request.form.get('rating')
+        
+        if db.update_review(review_id, game_title, review_text, rating):
+            flash('Review updated successfully!', 'update')
+            return redirect(url_for('home'))
+        flash('Error updating review. Please try again.', 'error')
+    
+    return render_template("edit_review.html", review=review)
 
-app.run(debug=True, port=5000)
+
+@app.route("/delete/<int:review_id>")
+@login_required
+def delete_review(review_id):
+    review = db.get_review_by_id(review_id)
+    
+    if not review or review['user_id'] != session['id']:
+        flash('You can only delete your own reviews', 'error')
+        return redirect(url_for('home'))
+    
+    if db.delete_review(review_id):
+        flash('Review deleted successfully!', 'delete')
+    else:
+        flash('Error deleting review', 'error')
+    
+    return redirect(url_for('home'))
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
